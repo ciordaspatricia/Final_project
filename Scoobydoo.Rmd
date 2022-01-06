@@ -1,0 +1,242 @@
+---
+title: "Final_assignment"
+author: "Ciordas Patricia"
+date: "12/27/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(viridis)
+library(stringr)
+
+```
+
+## Read data
+```{r}
+scoobydoo <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-07-13/scoobydoo.csv')
+```
+
+## Data exploration
+```{r}
+dim(scoobydoo)
+
+scoobydoo %>% 
+  count(monster_gender) %>%
+  view()
+
+scoobydoo %>%
+  count(monster_type) %>%
+  view()
+
+scoobydoo %>%
+  count(imdb) %>%
+  view()
+
+```
+##Which is the best episode based on imdb ratings?
+
+```{r}
+scoobydoo %>%
+  arrange(desc(imdb)) 
+view(scoobydoo)
+
+#The best episode was 'Scoobynatural' with 9.6 imdb rating, which was a crossover show. 
+
+```
+
+##When was(what year/years) Scooby doo mostly aired?
+```{r}
+
+scoobydoo %>%
+  ggplot(aes(date_aired)) +
+  geom_histogram()+
+  theme_light() +
+  labs(x = "YEARS", y = NULL, title = "Dated aired in the US") +
+  theme(plot.title = element_text(hjust = 0.5)) 
+
+#Based on the histogram we can see that most of the episodes were aired before 2000, mostly around the 1980's.
+```
+
+##In the mostly aired dates which was the highest imdb rating?
+```{r}
+scoobydoo %>%
+  ggplot(aes(date_aired, fill = imdb)) +
+  geom_histogram()+
+  theme_light() +
+  labs(x = "YEARS", y = NULL, title = "Imdb ratings by year") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_fill_viridis_d()
+
+#Based on the histogram we can see that in the mostly aired years (the 1980's) the highest imdb rating was 8 and the avarage imdb rating was 7. We can also tell that in the imdb ratings we can see an increase by year, in the 1980's the episodes had lower ratings than in the 2000's.
+```
+##Types of monsters in the Scooby doo tv show
+```{r}
+monstertype <-
+ scoobydoo %>%
+  count(monster_type) %>%
+arrange(desc(n)) 
+ 
+#What are the top 5 monsters that were in the Scooby doo?
+monster_type %>% discard(is.null)
+topmonsters <- scoobydoo %>%
+  count(monster_type, sort = TRUE) %>% 
+  top_n(5) %>%
+  discard(is.null)
+
+# Top 5 monsters are: Ghosts (86), Animal (71), Undead (37), Mythical (35) and Posessed object (34).
+
+```
+
+## How many times did they capture one of the mystery team members?
+```{r}
+
+#Times when Fred has been captured: 71
+fred_captured <- scoobydoo %>%
+  count(captured_fred) %>%
+  filter(captured_fred == "TRUE")
+
+
+#Times when Daphnie has been captured: 91
+daphnie_captured <- scoobydoo %>%
+  count(captured_daphnie) %>%
+  filter(captured_daphnie == "TRUE")
+
+
+#Times when Velma has been captured: 74
+velma_captured <- scoobydoo %>%
+  count(captured_velma) %>%
+  filter(captured_velma == "TRUE")
+
+
+#Times when Shaggy has been captured: 85
+shaggy_captured <- scoobydoo %>%
+  count(captured_shaggy) %>%
+  filter(captured_shaggy == "TRUE")
+
+
+#Times when Scooby has been captured: 83
+scooby_captured <- scoobydoo %>%
+  count(captured_scooby) %>%
+  filter(captured_scooby == "TRUE")
+
+#Based on the results we can see that Daphnie was the one who has been captured the most times, and Fred was the one who has been captured the least times.
+
+```
+
+##Does the longer run time imply higher imdb score?
+```{r}
+
+
+scoobydoo %>%
+  drop_na(imdb) %>%
+  
+  ggplot() +
+  aes(imdb, run_time, color = network) +
+  geom_point(size =1)+
+  scale_y_log10() +
+  theme_classic() 
+  
+
+#Does the run time has an impact on the network it was played?
+
+scoobydoo %>%
+count(network) 
+
+
+scoobydoo %>%
+  mutate(network = recode_factor(network, "ABC" = "1", "Adult Swim" = "2", "Cartoon Network" = "3", "CBS" = "4", "Syndication" = "5", "TBC" = "6", "The CW" = "7", "The WB" = "8", "Warner Bros. Picture" = "9")) 
+
+modelimd <- lm(run_time~network, data=scoobydoo)
+summary(modelimd)
+
+#F-statistics: 153.5, corresponding p-value 2.2e-16. Since this p-value is not less than .05, the model is statistically not significant.
+#Multiple R-squared = .7216. This tells us that 72,16% of the variation in the response variable, y, can be explained by the predictor variable, x.
+
+#### Checking assumptions
+
+Check the normality assumption.
+
+```{r}
+plot(modelimd, 2)
+```
+
+Check the linearity assumption.
+
+```{r}
+plot(modelimd, 1)
+```
+
+Check the homoscedasticty assumption (homogeneity of variance).
+
+```{r}
+plot(modelimd, 3)
+```
+
+##Suspects amount based on the arrest and place
+
+```{r}
+
+scoobydoo %>%
+  ggplot() +
+  aes(arrested, suspects_amount, color = setting_terrain, show.legend = FALSE) +
+  geom_jitter() +
+  labs( x = "Status of arrest", y = "Amount of suspects", title = "Amount of the suspects based on the status of arrest")
+  
+#Based on the plot we can see that most of the monsters has been arrested by the Mystery Team, and also most of the episodes took place in an urban terrain.
+```
+
+##Did the number of monsters increase during the years?
+```{r}
+scoobydoo %>%
+ggplot() +
+  aes(x = date_aired, y = monster_amount, color = monster_real) + 
+  geom_jitter()
+
+
+#Based on the plot we can see that most of the monsters weren't real in the aired episodes and in avarage the amount of the monsters was lower than 5.
+```
+
+##Does the amount of the monsters correlate with the amount of the suspects?
+```{r}
+scoobydoo %>%
+  ggplot() +
+aes(x = monster_amount, y = suspects_amount) +
+  geom_jitter()
+
+
+correlation <- cor(scoobydoo$monster_amount, scoobydoo$suspects_amount)
+
+#The correlation between the amount of suspects and amount of monsters is low (0.015).
+
+```
+
+#Does the amount of monsters predict the imdb rating of the show?
+```{r}
+
+model1 <- lm(monster_amount~imdb, data = scoobydoo)
+summary(model1)
+
+#F-statistics: 10.42, corresponding p-value 2.2e-16. Since this p-value is not less than .05, the model is statistically not significant.
+#Multiple R-squared = .4802. This tells us that 48,02% of the variation in the response variable, y, can be explained by the predictor variable, x.
+
+#### Checking assumptions
+
+Check the normality assumption.
+
+```{r}
+plot(model1, 2)
+```
+
+Check the linearity assumption.
+
+```{r}
+plot(model1, 1)
+```
+
+Check the homoscedasticty assumption (homogeneity of variance).
+
+```{r}
+plot(model1, 3)
+```
